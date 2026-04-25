@@ -16,6 +16,7 @@ export const Sidebar = ({ currentView, onViewChange, onLogout, dosenName }) => {
           <div>
             <h1 className="text-white font-bold text-lg">Setoran Hafalan</h1>
             <p className="text-emerald-300 text-xs tracking-wide">Dosen PA · Kelola Hafalan</p>
+            <p className="text-gray-400 text-[10px] mt-0.5">by Excel Tri Dermawan</p>
           </div>
         </div>
       </div>
