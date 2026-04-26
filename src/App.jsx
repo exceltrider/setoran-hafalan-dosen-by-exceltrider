@@ -5,40 +5,9 @@ import { Dashboard } from './components/Dashboard';
 import { StudentsList } from './components/StudentsList';
 import { StudentDetail } from './components/StudentDetail';
 import { LoadingSpinner } from './components/LoadingSpinner';
+import { NotFound } from './components/NotFound';
 import { getDosenInfo } from './lib/api';
 import { Toast } from './components/Toast';
-
-function NotFound() {
-  const spotifyEmbedUrl = "https://open.spotify.com/embed/track/24rDDbSlFY9OHrlJb48CRh?utm_source=generator";
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex flex-col items-center justify-center px-4 text-white">
-      <div className="text-center max-w-2xl">
-        <h1 className="text-8xl font-bold mb-4 animate-pulse">404</h1>
-        <p className="text-2xl font-semibold mb-2">Not Found in The System</p>
-        <p className="text-xl text-gray-300 mb-6 italic">"404 (New Era) KiiiiKiii"</p>
-        <div className="w-full max-w-md mx-auto mb-8 rounded-xl overflow-hidden shadow-2xl">
-          <iframe
-            src={spotifyEmbedUrl}
-            width="100%"
-            height="80"
-            frameBorder="0"
-            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-            loading="lazy"
-            title="KiiiiKiii - 404 (New Era)"
-            className="rounded-lg"
-          ></iframe>
-        </div>
-        <button
-          onClick={() => window.location.href = '/'}
-          className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all duration-200 font-medium"
-        >
-          ← Back to Home
-        </button>
-      </div>
-    </div>
-  );
-}
 
 function LoginPage({ onLogin }) {
   const [username, setUsername] = useState('');
@@ -52,9 +21,7 @@ function LoginPage({ onLogin }) {
     setError('');
     setLoading(true);
     const result = await onLogin(username, password);
-    if (!result.success) {
-      setError(result.error);
-    }
+    if (!result.success) setError(result.error);
     setLoading(false);
   };
 
@@ -123,21 +90,13 @@ function LoginPage({ onLogin }) {
                     placeholder="Masukkan password"
                     required
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                     {showPassword ? '🙈' : '👁️'}
                   </button>
                 </div>
               </div>
               {error && <p className="text-red-500 text-sm">{error}</p>}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50"
-              >
+              <button type="submit" disabled={loading} className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50">
                 {loading ? 'Memproses...' : 'Masuk'}
               </button>
             </form>
@@ -157,43 +116,48 @@ function DashboardLayout({ onLogout }) {
   const [toast, setToast] = useState(null);
   const { user } = useAuth();
 
-  const [path, setPath] = useState(window.location.pathname);
+  const navigate = (view, student = null) => {
+    if (view === 'detail' && student) {
+      window.history.pushState(null, '', `/student/${student.nim}`);
+      setSelectedStudent(student);
+      setCurrentView('detail');
+    } else if (view === 'students') {
+      window.history.pushState(null, '', '/students');
+      setSelectedStudent(null);
+      setCurrentView('students');
+    } else if (view === 'dashboard') {
+      window.history.pushState(null, '', '/dashboard');
+      setSelectedStudent(null);
+      setCurrentView('dashboard');
+    }
+  };
 
   useEffect(() => {
     const handlePopState = () => {
-      setPath(window.location.pathname);
+      const path = window.location.pathname;
+      if (path === '/students') {
+        setCurrentView('students');
+        setSelectedStudent(null);
+      } else if (path.startsWith('/student/')) {
+        const nim = path.split('/').pop();
+        const student = students.find(s => s.nim === nim);
+        if (student) {
+          setSelectedStudent(student);
+          setCurrentView('detail');
+        } else {
+          window.location.href = '/not-found';
+        }
+      } else if (path === '/dashboard') {
+        setCurrentView('dashboard');
+        setSelectedStudent(null);
+      } else if (path !== '/' && path !== '') {
+        window.location.href = '/not-found';
+      }
     };
     window.addEventListener('popstate', handlePopState);
+    handlePopState();
     return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
-
-  useEffect(() => {
-    const currentPath = window.location.pathname;
-    if (currentPath === '/dashboard') {
-      setCurrentView('dashboard');
-      setSelectedStudent(null);
-    } else if (currentPath === '/students') {
-      setCurrentView('students');
-      setSelectedStudent(null);
-    } else if (currentPath.startsWith('/student/')) {
-      const nim = currentPath.split('/').pop();
-      const foundStudent = students.find(s => s.nim === nim);
-      if (foundStudent) {
-        setSelectedStudent(foundStudent);
-        setCurrentView('detail');
-      } else {
-        setCurrentView('404');
-      }
-    } else if (currentPath !== '/' && currentPath !== '') {
-      setCurrentView('404');
-    } else {
-      setCurrentView('dashboard');
-    }
-  }, [path, students]);
-
-  useEffect(() => {
-    fetchDosenData();
-  }, []);
+  }, [students]);
 
   const fetchDosenData = async () => {
     setLoading(true);
@@ -212,29 +176,16 @@ function DashboardLayout({ onLogout }) {
   };
 
   const handleSelectStudent = (student) => {
-    setSelectedStudent(student);
-    setCurrentView('detail');
-    window.history.pushState({}, '', `/student/${student.nim}`);
-    setPath(`/student/${student.nim}`);
-  };
-
-  const handleViewChange = (view) => {
-    if (view === 'dashboard') {
-      window.history.pushState({}, '', '/dashboard');
-      setPath('/dashboard');
-      setCurrentView('dashboard');
-      setSelectedStudent(null);
-    } else if (view === 'students') {
-      window.history.pushState({}, '', '/students');
-      setPath('/students');
-      setCurrentView('students');
-      setSelectedStudent(null);
-    }
+    navigate('detail', student);
   };
 
   const handleRefresh = () => {
     fetchDosenData();
   };
+
+  useEffect(() => {
+    fetchDosenData();
+  }, []);
 
   if (loading) {
     return (
@@ -244,17 +195,13 @@ function DashboardLayout({ onLogout }) {
     );
   }
 
-  if (currentView === '404') {
-    return <NotFound />;
-  }
-
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       <Sidebar
         currentView={currentView}
-        onViewChange={handleViewChange}
-        onLogout={onLogout}
+        onViewChange={(view) => navigate(view)}
+        onLogout={() => { onLogout(); window.location.href = '/login'; }}
         dosenName={dosenData?.nama || user?.name}
       />
       <main className="flex-1 overflow-y-auto">
@@ -263,14 +210,14 @@ function DashboardLayout({ onLogout }) {
             <Dashboard
               students={students}
               dosenName={dosenData?.nama || user?.name}
-              onViewStudents={() => handleViewChange('students')}
+              onViewStudents={() => navigate('students')}
             />
           )}
           {currentView === 'students' && (
             <StudentsList students={students} onSelectStudent={handleSelectStudent} />
           )}
           {currentView === 'detail' && selectedStudent && (
-            <StudentDetail student={selectedStudent} onBack={() => handleViewChange('students')} onRefresh={handleRefresh} />
+            <StudentDetail student={selectedStudent} onBack={() => navigate('students')} onRefresh={handleRefresh} />
           )}
         </div>
       </main>
@@ -280,10 +227,14 @@ function DashboardLayout({ onLogout }) {
 
 function App() {
   const { user, login, logout, loading } = useAuth();
+  const [isNotFound, setIsNotFound] = useState(false);
 
   useEffect(() => {
-    if (!user && window.location.pathname !== '/login') {
-      window.history.replaceState({}, '', '/');
+    const path = window.location.pathname;
+    if (user && path !== '/dashboard' && path !== '/students' && !path.startsWith('/student/') && path !== '/') {
+      setIsNotFound(true);
+    } else {
+      setIsNotFound(false);
     }
   }, [user]);
 
@@ -296,7 +247,12 @@ function App() {
   }
 
   if (!user) {
+    if (window.location.pathname !== '/login') window.history.replaceState(null, '', '/login');
     return <LoginPage onLogin={login} />;
+  }
+
+  if (isNotFound) {
+    return <NotFound />;
   }
 
   return <DashboardLayout onLogout={logout} />;
