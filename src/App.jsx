@@ -228,6 +228,7 @@ function DashboardLayout({ onLogout }) {
 function App() {
   const { user, login, logout, loading } = useAuth();
   const [isNotFound, setIsNotFound] = useState(false);
+  const [forceKey, setForceKey] = useState(0);
 
   useEffect(() => {
     const path = window.location.pathname;
@@ -236,7 +237,13 @@ function App() {
     } else {
       setIsNotFound(false);
     }
-  }, [user]);
+  }, [user, window.location.pathname]); 
+
+  const goToDashboard = () => {
+    window.history.pushState(null, '', '/dashboard');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    setIsNotFound(false);
+  };
 
   if (loading) {
     return (
@@ -252,10 +259,8 @@ function App() {
   }
 
   if (isNotFound) {
-    return <NotFound />;
+    return <NotFound onBackToDashboard={goToDashboard} />;
   }
 
   return <DashboardLayout onLogout={logout} />;
 }
-
-export default App;
