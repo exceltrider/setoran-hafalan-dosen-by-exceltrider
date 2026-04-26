@@ -1,10 +1,12 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.tif.uin-suska.ac.id/setoran-dev/v1';
-const AUTH_BASE_URL = import.meta.env.VITE_AUTH_BASE_URL || 'https://id.tif.uin-suska.ac.id';
+const API_KEY = import.meta.env.VITE_API_KEY;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const AUTH_BASE_URL = import.meta.env.VITE_AUTH_BASE_URL;
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
+  params: { apikey: API_KEY },
 });
 
 apiClient.interceptors.request.use((config) => {
@@ -23,7 +25,7 @@ export const login = async (username, password) => {
   params.append('username', username);
   params.append('password', password);
   params.append('scope', 'openid profile email');
-  
+
   const response = await axios.post(`${AUTH_BASE_URL}/realms/dev/protocol/openid-connect/token`, params, {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
   });

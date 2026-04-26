@@ -1,6 +1,10 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
-export function LoginPage({ onLogin }) {
+export function LoginPage() {
+  const { login } = useAuth();
+  const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -11,8 +15,10 @@ export function LoginPage({ onLogin }) {
     e.preventDefault();
     setError('');
     setLoading(true);
-    const result = await onLogin(username, password);
-    if (!result.success) {
+    const result = await login(username, password);
+    if (result.success) {
+      navigate('/dashboard');
+    } else {
       setError(result.error);
     }
     setLoading(false);
@@ -62,7 +68,7 @@ export function LoginPage({ onLogin }) {
             <h2 className="text-2xl font-bold text-gray-900 mb-6 hidden lg:block">Masuk</h2>
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Username / Email</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                 <input
                   type="email"
                   value={username}

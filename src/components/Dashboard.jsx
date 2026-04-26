@@ -1,6 +1,10 @@
+import { useOutletContext, useNavigate } from 'react-router-dom';
 import { Users, BookMarked, AlertCircle, TrendingUp, Clock, ChevronRight } from 'lucide-react';
 
-export const Dashboard = ({ students, dosenName, onViewStudents }) => {
+export const Dashboard = () => {
+  const { students, dosenData } = useOutletContext();
+  const navigate = useNavigate();
+
   const totalMahasiswa = students.length;
   const aktifMurojaah = students.filter(s => (s.info_setoran?.total_sudah_setor || 0) > 0).length;
   const belumSetor = students.filter(s => (s.info_setoran?.total_sudah_setor || 0) === 0).length;
@@ -23,11 +27,11 @@ export const Dashboard = ({ students, dosenName, onViewStudents }) => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-gray-500 mt-1">
-            Selamat datang, <span className="font-semibold text-gray-700">{dosenName}</span>
+            Selamat datang, <span className="font-semibold text-gray-700">{dosenData?.nama}</span>
           </p>
         </div>
         <button
-          onClick={onViewStudents}
+          onClick={() => navigate('/students')}
           className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-all duration-200 shadow-sm text-sm font-medium"
         >
           Lihat Semua Mahasiswa
