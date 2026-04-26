@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
@@ -6,22 +7,28 @@ import { StudentsList } from './components/StudentsList';
 import { StudentDetail } from './components/StudentDetail';
 import { LoadingSpinner } from './components/LoadingSpinner';
 import { NotFound } from './components/NotFound';
-import { getDosenInfo } from './lib/api';
+import { getDosenInfo, getStudentDetail } from './lib/api';
 import { Toast } from './components/Toast';
 
-function LoginPage({ onLogin }) {
+function LoginPage() {
+  const { login } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    const result = await onLogin(username, password);
-    if (!result.success) setError(result.error);
+    const result = await login(username, password);
+    if (result.success) {
+      navigate('/dashboard');
+    } else {
+      setError(result.error);
+    }
     setLoading(false);
   };
 
@@ -90,13 +97,21 @@ function LoginPage({ onLogin }) {
                     placeholder="Masukkan password"
                     required
                   />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
                     {showPassword ? '🙈' : '👁️'}
                   </button>
                 </div>
               </div>
               {error && <p className="text-red-500 text-sm">{error}</p>}
-              <button type="submit" disabled={loading} className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50">
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50"
+              >
                 {loading ? 'Memproses...' : 'Masuk'}
               </button>
             </form>
@@ -107,57 +122,13 @@ function LoginPage({ onLogin }) {
   );
 }
 
-function DashboardLayout({ onLogout }) {
-  const [currentView, setCurrentView] = useState('dashboard');
-  const [selectedStudent, setSelectedStudent] = useState(null);
+function DashboardLayout() {
+  const { logout } = useAuth();
   const [dosenData, setDosenData] = useState(null);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
-  const { user } = useAuth();
-
-  const navigate = (view, student = null) => {
-    if (view === 'detail' && student) {
-      window.history.pushState(null, '', `/student/${student.nim}`);
-      setSelectedStudent(student);
-      setCurrentView('detail');
-    } else if (view === 'students') {
-      window.history.pushState(null, '', '/students');
-      setSelectedStudent(null);
-      setCurrentView('students');
-    } else if (view === 'dashboard') {
-      window.history.pushState(null, '', '/dashboard');
-      setSelectedStudent(null);
-      setCurrentView('dashboard');
-    }
-  };
-
-  useEffect(() => {
-    const handlePopState = () => {
-      const path = window.location.pathname;
-      if (path === '/students') {
-        setCurrentView('students');
-        setSelectedStudent(null);
-      } else if (path.startsWith('/student/')) {
-        const nim = path.split('/').pop();
-        const student = students.find(s => s.nim === nim);
-        if (student) {
-          setSelectedStudent(student);
-          setCurrentView('detail');
-        } else {
-          window.location.href = '/not-found';
-        }
-      } else if (path === '/dashboard') {
-        setCurrentView('dashboard');
-        setSelectedStudent(null);
-      } else if (path !== '/' && path !== '') {
-        window.location.href = '/not-found';
-      }
-    };
-    window.addEventListener('popstate', handlePopState);
-    handlePopState();
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [students]);
+  const navigate = useNavigate();
 
   const fetchDosenData = async () => {
     setLoading(true);
@@ -175,92 +146,103 @@ function DashboardLayout({ onLogout }) {
     }
   };
 
-  const handleSelectStudent = (student) => {
-    navigate('detail', student);
-  };
-
-  const handleRefresh = () => {
-    fetchDosenData();
-  };
-
   useEffect(() => {
     fetchDosenData();
   }, []);
 
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-gray-50">
-        <LoadingSpinner />
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       <Sidebar
-        currentView={currentView}
-        onViewChange={(view) => navigate(view)}
-        onLogout={() => { onLogout(); window.location.href = '/login'; }}
-        dosenName={dosenData?.nama || user?.name}
+        currentView={window.location.pathname.split('/')[1] || 'dashboard'}
+        onViewChange={(view) => navigate(`/${view}`)}
+        onLogout={handleLogout}
+        dosenName={dosenData?.nama}
       />
       <main className="flex-1 overflow-y-auto">
         <div className="p-6 lg:p-8 max-w-7xl mx-auto">
-          {currentView === 'dashboard' && (
-            <Dashboard
-              students={students}
-              dosenName={dosenData?.nama || user?.name}
-              onViewStudents={() => navigate('students')}
-            />
-          )}
-          {currentView === 'students' && (
-            <StudentsList students={students} onSelectStudent={handleSelectStudent} />
-          )}
-          {currentView === 'detail' && selectedStudent && (
-            <StudentDetail student={selectedStudent} onBack={() => navigate('students')} onRefresh={handleRefresh} />
-          )}
+          <Routes>
+            <Route path="/dashboard" element={
+              <Dashboard
+                students={students}
+                dosenName={dosenData?.nama}
+                onViewStudents={() => navigate('/students')}
+              />
+            } />
+            <Route path="/students" element={
+              <StudentsList students={students} onSelectStudent={(student) => navigate(`/student/${student.nim}`)} />
+            } />
+            <Route path="/student/:nim" element={<StudentDetailWrapper students={students} onRefresh={fetchDosenData} />} />
+          </Routes>
         </div>
       </main>
     </div>
   );
 }
 
-function App() {
-  const { user, login, logout, loading } = useAuth();
-  const [isNotFound, setIsNotFound] = useState(false);
-  const [forceKey, setForceKey] = useState(0);
+function StudentDetailWrapper({ students, onRefresh }) {
+  const { nim } = useParams();
+  const [student, setStudent] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const path = window.location.pathname;
-    if (user && path !== '/dashboard' && path !== '/students' && !path.startsWith('/student/') && path !== '/') {
-      setIsNotFound(true);
-    } else {
-      setIsNotFound(false);
-    }
-  }, [user, window.location.pathname]); 
+    const fetchStudent = async () => {
+      try {
+        const res = await getStudentDetail(nim);
+        if (res.response) {
+          setStudent(res.data.info);
+        } else {
+          navigate('/not-found');
+        }
+      } catch (err) {
+        console.error(err);
+        navigate('/not-found');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStudent();
+  }, [nim, navigate]);
 
-  const goToDashboard = () => {
-    window.history.pushState(null, '', '/dashboard');
-    window.dispatchEvent(new PopStateEvent('popstate'));
-    setIsNotFound(false);
-  };
+  if (loading) return <LoadingSpinner />;
+  if (!student) return null;
+
+  return (
+    <StudentDetail
+      student={student}
+      onBack={() => navigate('/students')}
+      onRefresh={onRefresh}
+    />
+  );
+}
+
+function App() {
+  const { user, loading } = useAuth();
 
   if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-gray-50">
-        <LoadingSpinner />
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
-  if (!user) {
-    if (window.location.pathname !== '/login') window.history.replaceState(null, '', '/login');
-    return <LoginPage onLogin={login} />;
-  }
-
-  if (isNotFound) {
-    return <NotFound onBackToDashboard={goToDashboard} />;
-  }
-
-  return <DashboardLayout onLogout={logout} />;
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/" element={<Navigate to={user ? '/dashboard' : '/login'} />} />
+      <Route path="/dashboard" element={user ? <DashboardLayout /> : <Navigate to="/login" />} />
+      <Route path="/students" element={user ? <DashboardLayout /> : <Navigate to="/login" />} />
+      <Route path="/student/:nim" element={user ? <DashboardLayout /> : <Navigate to="/login" />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
 }
+
+export default App;
