@@ -1,4 +1,8 @@
+import { Link } from 'react-router-dom';
+
 export const NotFound = () => {
+  const spotifyEmbedUrl = "https://open.spotify.com/embed/track/24rDDbSlFY9OHrlJb48CRh?utm_source=generator&theme=0";
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex flex-col items-center justify-center px-4 text-white">
       <div className="text-center max-w-2xl">
@@ -7,22 +11,23 @@ export const NotFound = () => {
         <p className="text-xl text-gray-300 mb-6 italic">"404 (New Era) KiiiiKiii"</p>
         <div className="w-full max-w-md mx-auto mb-8 rounded-xl overflow-hidden shadow-2xl">
           <iframe
-            src="https://open.spotify.com/embed/track/24rDDbSlFY9OHrlJb48CRh?utm_source=generator"
+            src={spotifyEmbedUrl}
             width="100%"
-            height="80"
+            height="352"
             frameBorder="0"
+            allowFullScreen
             allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
             loading="lazy"
-            title="KiiiiKiii - 404 (New Era)"
+            title="KiiiKiii - 404 (New Era)"
             className="rounded-lg"
           ></iframe>
         </div>
-        <button
-          onClick={() => window.location.href = '/'}
+        <Link
+          to="/"
           className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all duration-200 font-medium"
         >
           ← Back to Home
-        </button>
+        </Link>
       </div>
     </div>
   );
