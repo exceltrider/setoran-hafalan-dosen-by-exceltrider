@@ -8,6 +8,38 @@ import { LoadingSpinner } from './components/LoadingSpinner';
 import { getDosenInfo } from './lib/api';
 import { Toast } from './components/Toast';
 
+function NotFound() {
+  const spotifyEmbedUrl = "https://open.spotify.com/embed/track/24rDDbSlFY9OHrlJb48CRh?utm_source=generator";
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex flex-col items-center justify-center px-4 text-white">
+      <div className="text-center max-w-2xl">
+        <h1 className="text-8xl font-bold mb-4 animate-pulse">404</h1>
+        <p className="text-2xl font-semibold mb-2">Not Found in The System</p>
+        <p className="text-xl text-gray-300 mb-6 italic">"404 (New Era) KiiiiKiii"</p>
+        <div className="w-full max-w-md mx-auto mb-8 rounded-xl overflow-hidden shadow-2xl">
+          <iframe
+            src={spotifyEmbedUrl}
+            width="100%"
+            height="80"
+            frameBorder="0"
+            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+            loading="lazy"
+            title="KiiiiKiii - 404 (New Era)"
+            className="rounded-lg"
+          ></iframe>
+        </div>
+        <button
+          onClick={() => window.location.href = '/'}
+          className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all duration-200 font-medium"
+        >
+          ← Back to Home
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function LoginPage({ onLogin }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -28,7 +60,6 @@ function LoginPage({ onLogin }) {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left Brand Section */}
       <div className="hidden lg:flex flex-1 bg-gradient-to-br from-emerald-900 via-emerald-800 to-emerald-900 text-white flex-col justify-between p-12">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center">
@@ -53,7 +84,6 @@ function LoginPage({ onLogin }) {
         </div>
       </div>
 
-      {/* Right Login Form */}
       <div className="flex-1 flex items-center justify-center p-6 bg-gray-50">
         <div className="w-full max-w-md">
           <div className="text-center mb-8 lg:hidden">
@@ -127,6 +157,40 @@ function DashboardLayout({ onLogout }) {
   const [toast, setToast] = useState(null);
   const { user } = useAuth();
 
+  const [path, setPath] = useState(window.location.pathname);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setPath(window.location.pathname);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  useEffect(() => {
+    const currentPath = window.location.pathname;
+    if (currentPath === '/dashboard') {
+      setCurrentView('dashboard');
+      setSelectedStudent(null);
+    } else if (currentPath === '/students') {
+      setCurrentView('students');
+      setSelectedStudent(null);
+    } else if (currentPath.startsWith('/student/')) {
+      const nim = currentPath.split('/').pop();
+      const foundStudent = students.find(s => s.nim === nim);
+      if (foundStudent) {
+        setSelectedStudent(foundStudent);
+        setCurrentView('detail');
+      } else {
+        setCurrentView('404');
+      }
+    } else if (currentPath !== '/' && currentPath !== '') {
+      setCurrentView('404');
+    } else {
+      setCurrentView('dashboard');
+    }
+  }, [path, students]);
+
   useEffect(() => {
     fetchDosenData();
   }, []);
@@ -150,6 +214,22 @@ function DashboardLayout({ onLogout }) {
   const handleSelectStudent = (student) => {
     setSelectedStudent(student);
     setCurrentView('detail');
+    window.history.pushState({}, '', `/student/${student.nim}`);
+    setPath(`/student/${student.nim}`);
+  };
+
+  const handleViewChange = (view) => {
+    if (view === 'dashboard') {
+      window.history.pushState({}, '', '/dashboard');
+      setPath('/dashboard');
+      setCurrentView('dashboard');
+      setSelectedStudent(null);
+    } else if (view === 'students') {
+      window.history.pushState({}, '', '/students');
+      setPath('/students');
+      setCurrentView('students');
+      setSelectedStudent(null);
+    }
   };
 
   const handleRefresh = () => {
@@ -164,15 +244,16 @@ function DashboardLayout({ onLogout }) {
     );
   }
 
+  if (currentView === '404') {
+    return <NotFound />;
+  }
+
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       <Sidebar
         currentView={currentView}
-        onViewChange={(view) => {
-          setCurrentView(view);
-          if (view === 'students') setSelectedStudent(null);
-        }}
+        onViewChange={handleViewChange}
         onLogout={onLogout}
         dosenName={dosenData?.nama || user?.name}
       />
@@ -182,17 +263,14 @@ function DashboardLayout({ onLogout }) {
             <Dashboard
               students={students}
               dosenName={dosenData?.nama || user?.name}
-              onViewStudents={() => {
-                setCurrentView('students');
-                setSelectedStudent(null);
-              }}
+              onViewStudents={() => handleViewChange('students')}
             />
           )}
           {currentView === 'students' && (
             <StudentsList students={students} onSelectStudent={handleSelectStudent} />
           )}
           {currentView === 'detail' && selectedStudent && (
-            <StudentDetail student={selectedStudent} onBack={() => setCurrentView('students')} onRefresh={handleRefresh} />
+            <StudentDetail student={selectedStudent} onBack={() => handleViewChange('students')} onRefresh={handleRefresh} />
           )}
         </div>
       </main>
@@ -202,6 +280,12 @@ function DashboardLayout({ onLogout }) {
 
 function App() {
   const { user, login, logout, loading } = useAuth();
+
+  useEffect(() => {
+    if (!user && window.location.pathname !== '/login') {
+      window.history.replaceState({}, '', '/');
+    }
+  }, [user]);
 
   if (loading) {
     return (

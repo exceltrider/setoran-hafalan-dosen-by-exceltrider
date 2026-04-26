@@ -1,14 +1,10 @@
 import axios from 'axios';
 
-const API_KEY = import.meta.env.VITE_API_KEY;
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const AUTH_BASE_URL = import.meta.env.VITE_AUTH_BASE_URL;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.tif.uin-suska.ac.id/setoran-dev/v1';
+const AUTH_BASE_URL = import.meta.env.VITE_AUTH_BASE_URL || 'https://id.tif.uin-suska.ac.id';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  params: {
-    apikey: API_KEY,
-  },
 });
 
 apiClient.interceptors.request.use((config) => {
@@ -19,17 +15,6 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-apiClient.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('access_token');
-      window.dispatchEvent(new Event('unauthorized'));
-    }
-    return Promise.reject(error);
-  }
-);
-
 export const login = async (username, password) => {
   const params = new URLSearchParams();
   params.append('client_id', 'setoran-mobile-dev');
@@ -38,16 +23,10 @@ export const login = async (username, password) => {
   params.append('username', username);
   params.append('password', password);
   params.append('scope', 'openid profile email');
-
-  const response = await axios.post(
-    `${AUTH_BASE_URL}/realms/dev/protocol/openid-connect/token`,
-    params,
-    {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-    }
-  );
+  
+  const response = await axios.post(`${AUTH_BASE_URL}/realms/dev/protocol/openid-connect/token`, params, {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  });
   return response.data;
 };
 
@@ -62,31 +41,14 @@ export const getStudentDetail = async (nim) => {
 };
 
 export const saveSetoran = async (nim, dataSetoran, tglSetoran = null) => {
-  const payload = {
-    data_setoran: dataSetoran.map((item) => ({
-      id_komponen_setoran: item.id_komponen_setoran,
-      nama_komponen_setoran: item.nama_komponen_setoran,
-    })),
-  };
-  if (tglSetoran) {
-    payload.tgl_setoran = tglSetoran;
-  }
+  const payload = { data_setoran: dataSetoran };
+  if (tglSetoran) payload.tgl_setoran = tglSetoran;
   const response = await apiClient.post(`/mahasiswa/setoran/${nim}`, payload);
   return response.data;
 };
 
 export const deleteSetoran = async (nim, dataSetoran) => {
-  const payload = {
-    data_setoran: dataSetoran.map((item) => ({
-      id: item.id,
-      id_komponen_setoran: item.id_komponen_setoran,
-      nama_komponen_setoran: item.nama_komponen_setoran,
-    })),
-  };
-  const response = await apiClient.delete(`/mahasiswa/setoran/${nim}`, {
-    data: payload,
-  });
+  const payload = { data_setoran: dataSetoran };
+  const response = await apiClient.delete(`/mahasiswa/setoran/${nim}`, { data: payload });
   return response.data;
 };
-
-export default apiClient;
